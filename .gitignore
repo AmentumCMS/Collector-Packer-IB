@@ -1,0 +1,13 @@
+# Ignore .vagrant
+.vagrant*
+ISO/
+
+# Ignore subdirectories
+!packer-*/
+!.github/
+
+# Ignore Files
+*.tgz
+*.zip
+*.bundle
+*.iso
