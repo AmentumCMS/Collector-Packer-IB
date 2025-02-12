@@ -10,7 +10,7 @@ on:
 
 jobs:
   Date:
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-latest
     outputs:
       Date: ${{ steps.date.outputs.date }}
     steps:
@@ -159,9 +159,6 @@ jobs:
       - name: Copy Markdowns to ISO
         run: cp -v *.md ISO/
 
-      - name: Show Artifacts
-        run: ls -1sSh ISO/*
-
       # Download latest binaries
       - name: Download Packer Binaries
         run: |
@@ -183,11 +180,9 @@ jobs:
           echo -e "\nHashing Binaries"
           sha256sum -b * | tee packer_binaries.sha
       # Download latest binaries
-      - name: Copy Markdowns to ${{ vars.COLLECTOR }} ISO
-        run: cp -v *.md ${{ vars.COLLECTOR }}/
 
-      - name: Show Artifacts in ISO
-        run: ls -Alht ${{ vars.COLLECTOR }}/*
+      - name: Show Artifacts
+        run: ls -1sSh ISO/*
 
       - name: Generate Artifact Hash File
         run: |

@@ -24,6 +24,8 @@ jobs:
   Skopeo:
     needs: [Date]
     runs-on: ubuntu-24.04
+    env:
+      GH_TOKEN: ${{ github.token }}
     steps:
       - name: Check out repository code
         uses: actions/checkout@v4
@@ -48,10 +50,8 @@ jobs:
 
       - name: Directory Contents
         run: |
-          echo -e "\nDirectory Contents"
-          ls -lAhS . ${{ vars.COLLECTOR }}
-          echo -e "\n\nDirectory Size"
-          du -hd1 . ${{ vars.COLLECTOR }}/*
+          echo -e "Directory Contents\n$(ls -lAhS *)"
+          echo -e "\n\nDirectory Size\n$(du -hd1)"
 
       - name: TARchive Skopeo Output
         run: |
@@ -72,18 +72,21 @@ jobs:
         with:
           name: ${{ vars.COLLECTOR }}-${{ needs.Date.outputs.Date }}.tgz
           path: ${{ vars.COLLECTOR }}-${{ needs.Date.outputs.Date }}.tgz
+          if-no-files-found: error
 
       - name: Upload TARchive SHA
         uses: actions/upload-artifact@v4
         with:
           name: ${{ vars.COLLECTOR }}-${{ needs.Date.outputs.Date }}.tgz.sha
           path: ${{ vars.COLLECTOR }}-${{ needs.Date.outputs.Date }}.tgz.sha
+          if-no-files-found: error
 
       - name: Upload TARchive ToC
         uses: actions/upload-artifact@v4
         with:
           name: ${{ vars.COLLECTOR }}-${{ needs.Date.outputs.Date }}.tgz.txt
           path: ${{ vars.COLLECTOR }}-${{ needs.Date.outputs.Date }}.tgz.txt
+          if-no-files-found: error
 
   Code:
     needs: [Date]
@@ -107,7 +110,7 @@ jobs:
       - name: Bundle Repo1 code base for ${{ vars.COLLECTOR }}
         run: |
           git bundle create --progress ${{ vars.COLLECTOR }}-${{ needs.Date.outputs.Date }}.bundle --all
-          echo -e "\nDirectory Listing $(ls -Alht *)"
+          echo -e "\nDirectory Listing\n$(ls -Alht *)"
 
       - name: Generate Hash
         run: |
@@ -119,12 +122,14 @@ jobs:
         with:
           name: ${{ vars.COLLECTOR }}-${{ needs.Date.outputs.Date }}.bundle
           path: ${{ vars.COLLECTOR }}-${{ needs.Date.outputs.Date }}.bundle
+          if-no-files-found: error
 
-      - name: Upload bundle sha
+      - name: Upload bundle hash
         uses: actions/upload-artifact@v4
         with:
           name: ${{ vars.COLLECTOR }}-${{ needs.Date.outputs.Date }}.bundle.sha
           path: ${{ vars.COLLECTOR }}-${{ needs.Date.outputs.Date }}.bundle.sha
+          if-no-files-found: error
 
   MakeISO:
     runs-on: ubuntu-24.04
@@ -141,7 +146,7 @@ jobs:
       - name: Install mkisofs
         run: |
           sudo apt-get update -y
-          sudo apt-get install -y mkisofs isomd5sum
+          sudo apt-get install -y mkisofs isomd5sum wget
 
       - name: Download Artifacts
         uses: actions/download-artifact@v4
@@ -149,6 +154,10 @@ jobs:
           merge-multiple: true
           path: ISO
 
+      - name: Copy Markdowns to ISO
+        run: cp -v *.md ISO/
+
+      # Download latest binaries
       - name: Download Packer Binaries
         run: |
           echo -e "\nDownloading Binaries\n"
@@ -168,9 +177,7 @@ jobs:
           wget -nv ${URL}/packer_${VERSION}_windows_amd64.zip
           echo -e "\nHashing Binaries"
           sha256sum -b * | tee packer_binaries.sha
-
-      - name: Copy Markdowns to ISO
-        run: cp -v *.md ISO/
+      # Download latest binaries
 
       - name: Show Artifacts
         run: ls -1sSh ISO/*
@@ -185,6 +192,7 @@ jobs:
         with:
           name: ${{ vars.COLLECTOR }}-${{ needs.Date.outputs.Date }}.sha
           path: ISO/${{ vars.COLLECTOR }}-${{ needs.Date.outputs.Date }}.sha
+          if-no-files-found: error
 
       - name: ISO Table of contents
         run: |
@@ -229,6 +237,7 @@ jobs:
         with:
           name: ${{ vars.COLLECTOR }}-${{ needs.Date.outputs.Date }}.iso.sha
           path: ${{ vars.COLLECTOR }}-${{ needs.Date.outputs.Date }}.iso.sha
+          if-no-files-found: error
 
   Release:
     runs-on: ubuntu-24.04
@@ -248,7 +257,7 @@ jobs:
       - name: Show Artifacts
         run: ls -Alht ${{ vars.COLLECTOR }}-*.*
 
-    # Set up git
+      # Create Release
 
   Sharepoint:
     runs-on: ubuntu-24.04
