@@ -23,7 +23,7 @@ jobs:
 
   Skopeo:
     needs: [Date]
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - name: Check out repository code
         uses: actions/checkout@v4
@@ -35,25 +35,37 @@ jobs:
 
       - name: DSO Login
         run: |
-          skopeo login registry1.dso.mil -u ${{ secrets.REGISTRY_USER }} -p ${{ secrets.REGISTRY_TOKEN }}
+          skopeo login registry1.dso.mil \
+            -u ${{ secrets.REGISTRY_USER }} \
+            -p ${{ secrets.REGISTRY_TOKEN }}
 
       - name: Run Skopeo Sync
         run: |
           skopeo sync \
-              --src yaml --dest dir ${{ vars.COLLECTOR }}.yml ${{ vars.COLLECTOR }}
+            --src yaml --dest dir \
+            ${{ vars.COLLECTOR }}.yml \
+            ${{ vars.COLLECTOR }}
 
       - name: Directory Contents
         run: |
-          echo "Directory Contents"
-          ls -lAhS *
-          echo -e "\nDirectory Size"
-          du -hd1 
+          echo -e "\nDirectory Contents"
+          ls -lAhS . ${{ vars.COLLECTOR }}
+          echo -e "\n\nDirectory Size"
+          du -hd1 . ${{ vars.COLLECTOR }}/*
 
       - name: TARchive Skopeo Output
         run: |
           tar -cv -Ipigz --remove-files \
-            -f ${{ vars.COLLECTOR }}-${{ needs.Date.outputs.Date }}.tgz ${{ vars.COLLECTOR }}
-          ls -Alh ${{ vars.COLLECTOR }}-${{ needs.Date.outputs.Date }}.tgz
+            -f ${{ vars.COLLECTOR }}-${{ needs.Date.outputs.Date }}.tgz ${{ vars.COLLECTOR }} \
+          | tee ${{ vars.COLLECTOR }}-${{ needs.Date.outputs.Date }}.tgz.txt
+
+      - name: Generate Hash
+        run: |
+          sha256sum -b ${{ vars.COLLECTOR }}-${{ needs.Date.outputs.Date }}.tgz | tee \
+            ${{ vars.COLLECTOR }}-${{ needs.Date.outputs.Date }}.tgz.sha
+ 
+      - name: List files 
+        run: ls -Alht ${{ vars.COLLECTOR }}-${{ needs.Date.outputs.Date }}.tgz*
 
       - name: Upload TARchive
         uses: actions/upload-artifact@v4
@@ -61,9 +73,21 @@ jobs:
           name: ${{ vars.COLLECTOR }}-${{ needs.Date.outputs.Date }}.tgz
           path: ${{ vars.COLLECTOR }}-${{ needs.Date.outputs.Date }}.tgz
 
+      - name: Upload TARchive SHA
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ vars.COLLECTOR }}-${{ needs.Date.outputs.Date }}.tgz.sha
+          path: ${{ vars.COLLECTOR }}-${{ needs.Date.outputs.Date }}.tgz.sha
+
+      - name: Upload TARchive ToC
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ vars.COLLECTOR }}-${{ needs.Date.outputs.Date }}.tgz.txt
+          path: ${{ vars.COLLECTOR }}-${{ needs.Date.outputs.Date }}.tgz.txt
+
   Code:
     needs: [Date]
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - name: Check out repository code
         uses: actions/checkout@v4
@@ -83,7 +107,12 @@ jobs:
       - name: Bundle Repo1 code base for ${{ vars.COLLECTOR }}
         run: |
           git bundle create --progress ${{ vars.COLLECTOR }}-${{ needs.Date.outputs.Date }}.bundle --all
-          ls -Alht *
+          echo -e "\nDirectory Listing $(ls -Alht *)"
+
+      - name: Generate Hash
+        run: |
+          sha256sum -b ${{ vars.COLLECTOR }}-${{ needs.Date.outputs.Date }}.bundle | tee \
+            ${{ vars.COLLECTOR }}-${{ needs.Date.outputs.Date }}.bundle.sha
 
       - name: Upload bundle
         uses: actions/upload-artifact@v4
@@ -91,9 +120,17 @@ jobs:
           name: ${{ vars.COLLECTOR }}-${{ needs.Date.outputs.Date }}.bundle
           path: ${{ vars.COLLECTOR }}-${{ needs.Date.outputs.Date }}.bundle
 
+      - name: Upload bundle sha
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ vars.COLLECTOR }}-${{ needs.Date.outputs.Date }}.bundle.sha
+          path: ${{ vars.COLLECTOR }}-${{ needs.Date.outputs.Date }}.bundle.sha
+
   MakeISO:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     needs: [Date, Code, Skopeo]
+    env:
+      GH_TOKEN: ${{ github.token }}
     permissions:
       contents: write
       pull-requests: read
@@ -114,7 +151,7 @@ jobs:
 
       - name: Download Packer Binaries
         run: |
-          echo -e "\nDownloading installers\n"
+          echo -e "\nDownloading Binaries\n"
           # Extract the version from the YAML file
           VERSION=$(grep 'packer' Packer-IB.yml | awk '{print $2}' | tr -d '^' | tr -d '$')
           echo "Packer version: $VERSION"
@@ -129,6 +166,7 @@ jobs:
           wget -nv ${URL}/packer_${VERSION}_linux_amd64.zip
           wget -nv ${URL}/packer_${VERSION}_windows_386.zip
           wget -nv ${URL}/packer_${VERSION}_windows_amd64.zip
+          echo -e "\nHashing Binaries"
           sha256sum -b * | tee packer_binaries.sha
 
       - name: Copy Markdowns to ISO
@@ -193,7 +231,7 @@ jobs:
           path: ${{ vars.COLLECTOR }}-${{ needs.Date.outputs.Date }}.iso.sha
 
   Release:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     needs: [Date, MakeISO]
     permissions:
       contents: write
@@ -208,10 +246,12 @@ jobs:
           merge-multiple: true
 
       - name: Show Artifacts
-        run: ls -Alh ${{ vars.COLLECTOR }}-*.*
+        run: ls -Alht ${{ vars.COLLECTOR }}-*.*
+
+    # Set up git
 
   Sharepoint:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     needs: [Date, MakeISO]
     permissions:
       contents: write
@@ -223,4 +263,6 @@ jobs:
           merge-multiple: true
 
       - name: Show Artifacts
-        run: ls -Alh ${{ vars.COLLECTOR }}-*.*
+        run: ls -Alht ${{ vars.COLLECTOR }}-*.*
+
+      # Upload to Sharepoint
