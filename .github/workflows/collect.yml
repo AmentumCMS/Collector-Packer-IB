@@ -449,6 +449,32 @@ jobs:
       # Download Binaries if needed
       # Binaries Downloaded
 
+      - name: Copy README to ${{ vars.COLLECTOR }} ISO
+        run: cp -v README.md ${{ vars.COLLECTOR }}/
+
+      # Download latest binaries
+      - name: Download Packer Binaries
+        run: |
+          echo -e "\nDownloading Binaries\n"
+          # Extract the version from the YAML file
+          VERSION=$(grep 'packer' Packer-IB.yml | awk '{print $2}' | tr -d '^' | tr -d '$' | head -n 1)
+          echo "Packer version: $VERSION"
+
+          # Define the URL
+          URL="https://releases.hashicorp.com/packer/${VERSION}"
+          echo -e "Using URL: ${URL}\n"
+
+          mkdir -p ${{ vars.COLLECTOR }}/Binaries
+          cd ${{ vars.COLLECTOR }}/Binaries
+          curl -kO "${URL}/packer_${VERSION}_SHA256SUMS"
+          curl -kO "${URL}/packer_${VERSION}_linux_386.zip"
+          curl -kO "${URL}/packer_${VERSION}_linux_amd64.zip"
+          curl -kO "${URL}/packer_${VERSION}_windows_386.zip"
+          curl -kO "${URL}/packer_${VERSION}_windows_amd64.zip"
+          echo -e "\nHashing Binaries"
+          sha256sum -b * | tee packer_binaries.sha
+      # Download latest binaries
+
       - name: Show Artifacts
         run: ls -1sh ${{ vars.COLLECTOR }}
 
