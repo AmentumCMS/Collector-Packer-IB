@@ -23,21 +23,24 @@ jobs:
 
   Skopeo:
     needs: [Date]
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-latest
     env:
       GH_TOKEN: ${{ github.token }}
     steps:
+      - name: Determine runner mounts
+        run: |
+          sudo echo -e "Disk freespace and mounts\n$(df -hT)\n\n$(mount)" | tee runner-disks.txt
       - name: Check out repository code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Install Skopeo
         run: |
           sudo apt-get update -y
           sudo apt-get install -y skopeo pigz
 
-      - name: DSO Login
+      - name: ${{ vars.REGISTRY }} Login
         run: |
-          skopeo login registry1.dso.mil \
+          skopeo login ${{ vars.REGISTRY }}  \
             -u ${{ secrets.REGISTRY_USER }} \
             -p ${{ secrets.REGISTRY_TOKEN }}
 

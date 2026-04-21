@@ -1,6 +1,12 @@
 [submodule "packer-1.12-ib-source"]
 	path = packer-1.12-ib-source
 	url = https://repo1.dso.mil/dsop/hashicorp/packer/1.12.git
+[submodule "packer-1.14-ib-source"]
+	path = packer-1.14-ib-source
+	url = https://repo1.dso.mil/dsop/hashicorp/packer/1.14.git
+[submodule "packer-ci-ib-source"]
+	path = packer-ci-ib-source
+	url = https://repo1.dso.mil/dsop/big-bang/packer-ci.git
 [submodule "packer-gh-source"]
 	path = packer-gh-source
 	url = https://github.com/hashicorp/packer.git
