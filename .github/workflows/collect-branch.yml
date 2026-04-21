@@ -476,11 +476,14 @@ jobs:
 
           mkdir -p ${{ vars.COLLECTOR }}/Binaries
           cd ${{ vars.COLLECTOR }}/Binaries
-          curl -kO "${URL}/packer_${VERSION}_SHA256SUMS"
-          curl -kO "${URL}/packer_${VERSION}_linux_386.zip"
-          curl -kO "${URL}/packer_${VERSION}_linux_amd64.zip"
-          curl -kO "${URL}/packer_${VERSION}_windows_386.zip"
-          curl -kO "${URL}/packer_${VERSION}_windows_amd64.zip"
+          for file in SHA256SUMS linux_386.zip linux_amd64.zip windows_386.zip windows_amd64.zip; do
+            if [ -f "packer_${VERSION}_${file}" ]; then
+              echo "File packer_${VERSION}_${file} already exists, skipping download."
+            else
+              echo "Downloading packer_${VERSION}_${file}..."
+              curl -kO "${URL}/packer_${VERSION}_${file}"
+            fi
+          done
           echo -e "\nHashing Binaries"
           sha256sum -b * | tee packer_binaries.sha
       # Download latest binaries
