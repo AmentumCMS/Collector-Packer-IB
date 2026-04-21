@@ -1,3 +1,4 @@
 registry1.dso.mil:
     images-by-tag-regex:
-        ironbank/hashicorp/packer: ^1.12.0$
+        ironbank/hashicorp/packer: ^1.14.2$
+        ironbank/big-bang/packer-ci: ^1.14.2$
